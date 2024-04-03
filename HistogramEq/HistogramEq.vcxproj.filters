@@ -16,6 +16,9 @@
     <Filter Include="kernels">
       <UniqueIdentifier>{816a9096-fc66-44b9-9bb6-f65b3755cef7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{4edcecb1-ac6d-4a4d-a62a-4faccb2d3ada}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Assessment 1.cpp">
@@ -23,7 +26,15 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="kernels.cl">
+    <ClInclude Include="..\include\CImg.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\Utils.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="kernels\kernels.cl">
       <Filter>kernels</Filter>
     </None>
   </ItemGroup>

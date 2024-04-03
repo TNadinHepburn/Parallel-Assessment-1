@@ -139,7 +139,11 @@
     <ClCompile Include="Assessment 1.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="kernels.cl" />
+    <ClInclude Include="..\include\CImg.h" />
+    <ClInclude Include="..\include\Utils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="kernels\kernels.cl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

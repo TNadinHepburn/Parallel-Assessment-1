@@ -1,10 +1,10 @@
 // File containing all kernel functions.
 
-kernel void reduce_add_2(global const int* A, global int* B) {
+kernel void histogram(global const int* A, global int* B) {
 	int id = get_global_id(0);
 	int N = get_global_size(0);
 
-	B[id] = A[id];
+	B[1] += A[id];
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
 

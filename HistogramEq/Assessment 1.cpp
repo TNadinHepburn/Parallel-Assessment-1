@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
 	//detect any potential exceptions
 	try {
 		CImg<unsigned char> image_input(image_filename.c_str());
-		CImgDisplay disp_input(image_input, "input");
+		// CImgDisplay disp_input(image_input, "input");
 
 		//Part 2 - host operations
 		//2.1 Select computing devices
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
 		//2.2 Load & build the device code
 		cl::Program::Sources sources;
 
-		AddSources(sources, "kernels/my_kernels.cl");
+		AddSources(sources, "kernels/kernels.cl");
 
 		cl::Program program(context, sources);
 
@@ -68,5 +68,46 @@ int main(int argc, char** argv) {
 		}
 
 
+		typedef int mytype;
+		int nr_bins = 256;
+		std::vector<mytype> B(nr_bins);
+		size_t output_size = B.size() * sizeof(mytype);//size in bytes
+
+
+
+		//Part 4 - device operations
+
+		//device - buffers
+		cl::Buffer buf_image_input(context, CL_MEM_READ_ONLY, image_input.size());
+		cl::Buffer buf_image_output(context, CL_MEM_READ_WRITE, image_input.size()); //should be the same as input image
+		cl::Buffer buf_bins(context, CL_MEM_READ_ONLY, sizeof(int));
+
+
+		//4.1 Copy data to device memory
+		queue.enqueueWriteBuffer(buf_image_input, CL_TRUE, 0, image_input.size(), &image_input.data()[0]);
+		queue.enqueueFillBuffer(buf_image_output, 0, 0, output_size);//zero B buffer on device memory
+		queue.enqueueWriteBuffer(buf_bins, CL_TRUE, 0, sizeof(int), &nr_bins);
+
+		//4.2 Setup and execute all kernels (i.e. device code)
+		cl::Kernel kernel = cl::Kernel(program, "histogram");
+		kernel.setArg(0, buf_image_input);
+		kernel.setArg(1, buf_image_output);
+		kernel.setArg(2, buf_bins);
+
+		//call all kernels in a sequence
+		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange);
+
+		//4.3 Copy the result from device to host
+		queue.enqueueReadBuffer(buf_image_output, CL_TRUE, 0, output_size, &B[0]);
+
+
+		std::cout << "B = " << B << std::endl;
+	}
+	catch (const cl::Error& err) {
+		std::cerr << "ERROR: " << err.what() << ", " << getErrorString(err.err()) << std::endl;
+	}
+	catch (CImgException& err) {
+		std::cerr << "ERROR: " << err.what() << std::endl;
+	}
 	return 0;
 }
