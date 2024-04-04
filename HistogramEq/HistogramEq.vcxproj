@@ -143,6 +143,10 @@
     <ClInclude Include="..\include\Utils.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="images\mdr16-gs.pgm" />
+    <None Include="images\mdr16.ppm" />
+    <None Include="images\test.pgm" />
+    <None Include="images\test_large.pgm" />
     <None Include="kernels\kernels.cl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
