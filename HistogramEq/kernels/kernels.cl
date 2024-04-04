@@ -60,7 +60,10 @@ kernel void scan_bl(global int* A) {
 }
 
 
-
+kernel void identity(global int* A, global int* B) {
+	int id = get_global_id(0);
+	B[id] = A[id];
+}
 
 
 

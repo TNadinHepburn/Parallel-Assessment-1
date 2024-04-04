@@ -37,20 +37,20 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="kernels\kernels.cl">
+    <CopyFileToFolders Include="images\test.pgm">
+      <Filter>images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="images\test_large.pgm">
+      <Filter>images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="images\mdr16.ppm">
+      <Filter>images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="images\mdr16-gs.pgm">
+      <Filter>images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="kernels\kernels.cl">
       <Filter>kernels</Filter>
-    </None>
-    <None Include="images\mdr16.ppm">
-      <Filter>images</Filter>
-    </None>
-    <None Include="images\mdr16-gs.pgm">
-      <Filter>images</Filter>
-    </None>
-    <None Include="images\test.pgm">
-      <Filter>images</Filter>
-    </None>
-    <None Include="images\test_large.pgm">
-      <Filter>images</Filter>
-    </None>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>

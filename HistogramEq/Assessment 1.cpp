@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 	//Part 1 - handle command line options such as device selection, verbosity, etc.
 	int platform_id = 0;
 	int device_id = 0;
-	string image_filename = "test.ppm";
+	string image_filename = "test.pgm";
 
 	for (int i = 1; i < argc; i++) {
 		if ((strcmp(argv[i], "-p") == 0) && (i < (argc - 1))) { platform_id = atoi(argv[++i]); }
@@ -37,6 +37,8 @@ int main(int argc, char** argv) {
 		CImg<unsigned char> image_input(image_filename.c_str());
 		CImgDisplay disp_input(image_input, "input");
 
+		cerr << image_input << endl;
+
 		//Part 2 - host operations
 		//2.1 Select computing devices
 		cl::Context context = GetContext(platform_id, device_id);
@@ -50,7 +52,7 @@ int main(int argc, char** argv) {
 		//2.2 Load & build the device code
 		cl::Program::Sources sources;
 
-		AddSources(sources, "kernels/kernels.cl");
+		AddSources(sources, "kernels.cl");
 
 		cl::Program program(context, sources);
 
@@ -76,29 +78,40 @@ int main(int argc, char** argv) {
 
 		//device - buffers
 		cl::Buffer buf_image_input(context, CL_MEM_READ_ONLY, image_input.size());
-		cl::Buffer buf_hist_output(context, CL_MEM_READ_WRITE, B.size()); //should be the same as input image
+		cl::Buffer buf_hist_output(context, CL_MEM_READ_WRITE, output_size);
 		cl::Buffer buf_bins(context, CL_MEM_READ_ONLY, sizeof(int));
 
 
 		//4.1 Copy data to device memory
 		queue.enqueueWriteBuffer(buf_image_input, CL_TRUE, 0, image_input.size(), &image_input.data()[0]);
 		queue.enqueueFillBuffer(buf_hist_output, 0, 0, output_size);//zero B buffer on device memory
-		queue.enqueueWriteBuffer(buf_bins, CL_TRUE, 0, sizeof(int), &nr_bins);
+		//queue.enqueueWriteBuffer(buf_bins, CL_TRUE, 0, sizeof(int), &nr_bins);
 
 		//4.2 Setup and execute all kernels (i.e. device code)
-		cl::Kernel kernel = cl::Kernel(program, "histogram");
+		cl::Kernel kernel = cl::Kernel(program, "identity");
 		kernel.setArg(0, buf_image_input);
 		kernel.setArg(1, buf_hist_output);
-		kernel.setArg(2, buf_bins);
+		//kernel.setArg(2, buf_bins);
+
+		cl::Device device = context.getInfo<CL_CONTEXT_DEVICES>()[0]; // get device
+		cerr << kernel.getWorkGroupInfo<CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>(device) << endl; // get info
+		cerr << kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device) << endl; // get info
+
 
 		//call all kernels in a sequence
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange);
-
 		//4.3 Copy the result from device to host
 		queue.enqueueReadBuffer(buf_hist_output, CL_TRUE, 0, output_size, &B[0]);
 
 
 		std::cout << "B = " << B << std::endl;
+
+		// && !disp_output.is_closed() && !disp_output.is_keyESC()
+		while (!disp_input.is_closed() 
+			&& !disp_input.is_keyESC() ) {
+			disp_input.wait(1);
+			//disp_output.wait(1);
+		}
 	}
 	catch (const cl::Error& err) {
 		std::cerr << "ERROR: " << err.what() << ", " << getErrorString(err.err()) << std::endl;
