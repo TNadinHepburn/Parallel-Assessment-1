@@ -1,4 +1,10 @@
 // File containing all kernel functions.
+//use image input to create histogram array
+//use scan on histogram to make cumulative histogram
+//make LUT from cum hist
+//map input image values to equalized values using LUT
+
+
 
 kernel void histogram(global const int* A, global int* H) {
 	int id = get_global_id(0);
@@ -63,7 +69,6 @@ kernel void scan_bl(global int* A) {
 kernel void freqency_normalisation(global int* A, global int* B) {
 	int id = get_global_id(0);
 	int N = get_global_size(0);
-
 
 	B[id] = A[id] / N * 255.0
 
