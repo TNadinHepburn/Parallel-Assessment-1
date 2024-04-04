@@ -60,6 +60,27 @@ kernel void scan_bl(global int* A) {
 }
 
 
+kernel void freqency_normalisation(global int* A, global int* B) {
+	int id = get_global_id(0);
+	int N = get_global_size(0);
+
+
+	B[id] = A[id] / N * 255.0
+
+}
+
+kernel void image_equalizer(global int* A, global int* B, local int* LUT) {
+	int id = get_global_id(0);
+	int N = get_global_size(0);
+
+	int result_LUT = LUT[A[id]]
+
+	B[id] = result_LUT;
+}
+
+
+
+
 kernel void identity(global int* A, global int* B) {
 	int id = get_global_id(0);
 	B[id] = A[id];
