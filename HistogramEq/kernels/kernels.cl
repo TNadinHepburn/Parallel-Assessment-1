@@ -1,6 +1,6 @@
 // File containing all kernel functions.
 //use image input to create histogram array
-//use scan on histogram to make cumulative histogram
+//use atomic_add/scan on histogram to make cumulative histogram
 //make LUT from cum hist
 //map input image values to equalized values using LUT
 
@@ -94,11 +94,68 @@ kernel void image_equalizer(global uchar* A, global uchar* B, global int* LUT) {
 }
 
 //RGBtoYCBCR
-kernel void rgb2ycbrb(global int* R, global int* G, global int* B, global int* Y, global int* Cb, global int* Cr) {
+kernel void rgb2ycbrb(global uchar* A, global uchar* B) {
+	int id = get_global_id(0);
+	int image_size = get_global_size(0) / 3; //each image consists of 3 colour channels
+	int colour_channel = id / image_size; // 0 - red, 1 - green, 2 - blue
+
+	double Y = 0.0;
+	double Cb = 0.0;
+	double Cr = 0.0;
+
+	//Y channel
+	if (colour_channel == 0) {
+		int r_val = A[id];
+		int g_val = A[id] + image_size;
+		int b_val = A[id] + image_size + image_size;
+		B[id] = 16 + 65.738 * r_val / 256 + 129.057 * g_val / 256 + 25.064 * b_val / 256;
+	}
+	//Cb channel
+	else if (colour_channel == 1) {
+		int r_val = A[id] - image_size;
+		int g_val = A[id] ;
+		int b_val = A[id] + image_size;
+		B[id] = 128 - 37.945 * r_val / 256 - 74.494 * g_val / 256 + 112.439 * b_val / 256;
+
+	}
+	//Cr channel
+	else {
+		int r_val = A[id] - image_size - image_size;
+		int g_val = A[id] - image_size;
+		int b_val = A[id];
+		B[id] = 128 + 112.439 * r_val - 94.154 * g_val / 256 - 18.285 * b_val / 256;
+	}
 
 }
 
-kernel void ycbrb2rgb(global int* Y, global int* Cb, global int* Cr, global int* R, global int* G, global int* B) {
+kernel void ycbrb2rgb(global uchar* A, global uchar* B) {
+	int id = get_global_id(0);
+	int image_size = get_global_size(0) / 3; //each image consists of 3 colour channels
+	int colour_channel = id / image_size; // 0 - red, 1 - green, 2 - blue
 
+	int R = 0;
+	int G = 0;
+	int B = 0;
+
+	//red channel
+	if (colour_channel == 0) {
+		int Y_val = A[id];
+		int Cr_val = A[id] + image_size + image_size;
+		B[id] = 298.082 * Y_val / 256 + 408.583 * Cr_val / 256 - 222.921;
+	}
+	//green channel
+	else if (colour_channel == 1) {
+		int Y_val = A[id] - image_size;
+		int Cb_val = A[id];
+		int Cr_val = A[id] + image_size;
+		B[id] = 298.082 * Y_val / 256 - 100.291 * Cb_val / 256 - 208.120 * Cr_val / 256 + 135.576;
+
+	}
+	//blue channel
+	else {
+		int Y_val = A[id] - image_size - image_size;
+		int Cb_val = A[id] - image_size;
+		B[id] = 298.082 * Y / 256 + 516.412 * Cb / 256 - 276.836;
+	}
 }
 
