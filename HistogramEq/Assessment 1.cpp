@@ -69,8 +69,8 @@ int main(int argc, char** argv) {
 
 
 		typedef int mytype;
-		int nr_bins = 256;
-		std::vector<mytype> B(nr_bins);
+		// int nr_bins = 256;
+		std::vector<mytype> B(256);
 		size_t output_size = B.size() * sizeof(mytype);//size in bytes
 
 
@@ -79,30 +79,26 @@ int main(int argc, char** argv) {
 		//device - buffers
 		cl::Buffer buf_image_input(context, CL_MEM_READ_ONLY, image_input.size());
 		cl::Buffer buf_hist_output(context, CL_MEM_READ_WRITE, output_size);
-		cl::Buffer buf_bins(context, CL_MEM_READ_ONLY, sizeof(int));
+		cl::Buffer buf_cumul_hist_output(context, CL_MEM_READ_WRITE, output_size);
+		cl::Buffer buf_LUT_output(context, CL_MEM_READ_WRITE, output_size);
+		cl::Buffer buf_equal_output(context, CL_MEM_READ_WRITE, image_input.size());
+		// cl::Buffer buf_bins(context, CL_MEM_READ_ONLY, sizeof(int));
 
 
 		//4.1 Copy data to device memory
 		queue.enqueueWriteBuffer(buf_image_input, CL_TRUE, 0, image_input.size(), &image_input.data()[0]);
-		queue.enqueueFillBuffer(buf_hist_output, 0, 0, output_size);//zero B buffer on device memory
+		queue.enqueueFillBuffer(buf_hist_output, 0, 0, output_size);
 		//queue.enqueueWriteBuffer(buf_bins, CL_TRUE, 0, sizeof(int), &nr_bins);
 
 		//4.2 Setup and execute all kernels (i.e. device code)
-		cl::Kernel kernel = cl::Kernel(program, "identity");
+		cl::Kernel kernel_histogram = cl::Kernel(program, "histogram");
 		kernel.setArg(0, buf_image_input);
 		kernel.setArg(1, buf_hist_output);
 		//kernel.setArg(2, buf_bins);
 
-		cl::Device device = context.getInfo<CL_CONTEXT_DEVICES>()[0]; // get device
-		cerr << kernel.getWorkGroupInfo<CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>(device) << endl; // get info
-		cerr << kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device) << endl; // get info
-
-
 		//call all kernels in a sequence
-		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange);
-		//4.3 Copy the result from device to host
+		queue.enqueueNDRangeKernel(kernel_histogram, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange);
 		queue.enqueueReadBuffer(buf_hist_output, CL_TRUE, 0, output_size, &B[0]);
-
 
 		std::cout << "B = " << B << std::endl;
 

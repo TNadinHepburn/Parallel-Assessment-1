@@ -6,7 +6,7 @@
 
 
 
-kernel void histogram(global const int* A, global int* H) {
+kernel void histogram(global const uchar* A, global int* H) {
 	int id = get_global_id(0);
 	//int lid = get_local_id(0);
 	int bin_index = A[id];
@@ -70,28 +70,17 @@ kernel void freqency_normalisation(global int* A, global int* B) {
 	int id = get_global_id(0);
 	int N = get_global_size(0);
 
-	B[id] = A[id] / N * 255.0
+	B[id] = A[id] * 255.0 / N 
 
 }
 
-kernel void image_equalizer(global int* A, global int* B, local int* LUT) {
+kernel void image_equalizer(global uchar* A, global uchar* B, local int* LUT) {
 	int id = get_global_id(0);
-	int N = get_global_size(0);
 
 	int result_LUT = LUT[A[id]]
 
 	B[id] = result_LUT;
 }
-
-
-
-
-kernel void identity(global int* A, global int* B) {
-	int id = get_global_id(0);
-	B[id] = A[id];
-}
-
-
 
 
 //kernel void RGBToHSL(global const int* R, global const int* G, global const int* B, global const int* H, global const int* S, global const int* L)
