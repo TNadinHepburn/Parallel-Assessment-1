@@ -10,7 +10,7 @@ kernel void histogram_gs(global const uchar* A, global int* H) {
 	int id = get_global_id(0);
 	//int lid = get_local_id(0);
 	//int bin_index = A[id];
-	int bin_index = A[id] / (256 / (int)NB);
+	int bin_index = A[id] / (256 / A[255]);
 	//if (lid < NB)
 		//H[lid] = 0;
 
