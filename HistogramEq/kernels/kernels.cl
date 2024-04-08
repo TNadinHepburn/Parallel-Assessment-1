@@ -81,11 +81,11 @@ kernel void freqency_normalisation(global int* A, global int* B) {
 	int id = get_global_id(0);
 	int N = get_global_size(0);
 
-	B[id] = A[id] * 255.0 / N;
+	B[id] = A[id] * 255.0 / A[255];
 
 }
 
-kernel void image_equalizer(global uchar* A, global uchar* B, local int* LUT) {
+kernel void image_equalizer(global uchar* A, global uchar* B, global int* LUT) {
 	int id = get_global_id(0);
 
 	int result_LUT = LUT[A[id]];
@@ -93,55 +93,5 @@ kernel void image_equalizer(global uchar* A, global uchar* B, local int* LUT) {
 	B[id] = result_LUT;
 }
 
-
-//kernel void RGBToHSL(global const int* R, global const int* G, global const int* B, global const int* H, global const int* S, global const int* L)
-//{
-//    int id = get_global_id(0);
-//    int r = 100.0;
-//    int g = 100.0;
-//    int b = 200.0;
-//
-//    float fR = r / 255.0;
-//    float fG = g / 255.0;
-//    float fB = b / 255.0;
-//
-//
-//    float fCMin = Min(fR, fG, fB);
-//    float fCMax = Max(fR, fG, fB);
-//
-//
-//    L = 50 * (fCMin + fCMax);
-//
-//    if (fCMin = fCMax)
-//    {
-//        S = 0;
-//        H = 0;
-//        return;
-//
-//    }
-//    else if (L < 50)
-//    {
-//        S = 100 * (fCMax - fCMin) / (fCMax + fCMin);
-//    }
-//    else
-//    {
-//        S = 100 * (fCMax - fCMin) / (2.0 - fCMax - fCMin);
-//    }
-//
-//    if (fCMax == fR)
-//    {
-//        H = 60 * (fG - fB) / (fCMax - fCMin);
-//    }
-//    if (fCMax == fG)
-//    {
-//        H = 60 * (fB - fR) / (fCMax - fCMin) + 120;
-//    }
-//    if (fCMax == fB)
-//    {
-//        H = 60 * (fR - fG) / (fCMax - fCMin) + 240;
-//    }
-//    if (H < 0)
-//    {
-//        H = H + 360;
-//    }
-//}
+//RGBtoYCHMK
+kernel void image_equalizer(global int* R, global int* G, global int* B, global int* Y, global int* Cb, global int* Cr) {

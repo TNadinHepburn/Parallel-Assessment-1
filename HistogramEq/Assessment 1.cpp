@@ -121,13 +121,41 @@ int main(int argc, char** argv) {
 
 		std::cout << "Cumulative Histogram = " << CUMUL_HISTOGRAM << std::endl;
 
+		std::vector<mytype> LUT(256);
+		size_t LUT_size = LUT.size() * sizeof(mytype);//size in bytes
+
+		queue.enqueueFillBuffer(buf_LUT_output, 0, 0, LUT_size);
+		cl::Kernel kernel_LUT = cl::Kernel(program, "freqency_normalisation");
+		kernel_LUT.setArg(0, buf_cumul_hist_output);
+		kernel_LUT.setArg(1, buf_LUT_output);
+
+
+		queue.enqueueNDRangeKernel(kernel_LUT, cl::NullRange, cl::NDRange(LUT_size), cl::NullRange);
+		queue.enqueueReadBuffer(buf_LUT_output, CL_TRUE, 0, LUT_size, &LUT[0]);
+
+		std::cout << "LUT = " << LUT << std::endl;
+
+
+		cl::Kernel kernel_equalize = cl::Kernel(program, "image_equalizer");
+		kernel_equalize.setArg(0, buf_image_input);
+		kernel_equalize.setArg(1, buf_equal_output);
+		kernel_equalize.setArg(2, buf_LUT_output);
+
+
+		queue.enqueueNDRangeKernel(kernel_equalize, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange);
+
+		vector<unsigned char> equal_output_buffer(image_input.size());
+		queue.enqueueReadBuffer(buf_equal_output, CL_TRUE, 0, equal_output_buffer.size(), &equal_output_buffer.data()[0]);
+
+		CImg<unsigned char> equalized_image(equal_output_buffer.data(), image_input.width(), image_input.height(), image_input.depth(), image_input.spectrum());
+		CImgDisplay disp_output(equalized_image, "output");
 
 		// && !disp_output.is_closed() && !disp_output.is_keyESC()
 
 		while (!disp_input.is_closed() 
-			&& !disp_input.is_keyESC() && !hist_disp.is_closed() && !hist_disp.is_keyESC()) {
+			&& !disp_input.is_keyESC() && !disp_output.is_closed() && !disp_output.is_keyESC()) {
 			disp_input.wait(1);
-			hist_disp.wait(1);
+			disp_output.wait(1);
 		}
 	}
 	catch (const cl::Error& err) {
