@@ -1,3 +1,5 @@
+// The layout and functions in this project build upon the code from workshop Tutorial 2 & Tutorial 3
+
 #include <iostream>
 #include <vector>
 
@@ -70,43 +72,62 @@ int main(int argc, char** argv) {
 
 		typedef int mytype;
 		// int nr_bins = 256;
-		std::vector<mytype> B(256);
-		size_t output_size = B.size() * sizeof(mytype);//size in bytes
+		std::vector<mytype> HISTOGRAM(256);
+		size_t hist_size = HISTOGRAM.size() * sizeof(mytype);//size in bytes
 
 
 		//Part 4 - device operations
 
 		//device - buffers
 		cl::Buffer buf_image_input(context, CL_MEM_READ_ONLY, image_input.size());
-		cl::Buffer buf_hist_output(context, CL_MEM_READ_WRITE, output_size);
-		cl::Buffer buf_cumul_hist_output(context, CL_MEM_READ_WRITE, output_size);
-		cl::Buffer buf_LUT_output(context, CL_MEM_READ_WRITE, output_size);
+		cl::Buffer buf_hist_output(context, CL_MEM_READ_WRITE, hist_size);
+		cl::Buffer buf_cumul_hist_output(context, CL_MEM_READ_WRITE, hist_size);
+		cl::Buffer buf_LUT_output(context, CL_MEM_READ_WRITE, hist_size);
 		cl::Buffer buf_equal_output(context, CL_MEM_READ_WRITE, image_input.size());
 		// cl::Buffer buf_bins(context, CL_MEM_READ_ONLY, sizeof(int));
 
 
 		//4.1 Copy data to device memory
 		queue.enqueueWriteBuffer(buf_image_input, CL_TRUE, 0, image_input.size(), &image_input.data()[0]);
-		queue.enqueueFillBuffer(buf_hist_output, 0, 0, output_size);
+		queue.enqueueFillBuffer(buf_hist_output, 0, 0, hist_size);
 		//queue.enqueueWriteBuffer(buf_bins, CL_TRUE, 0, sizeof(int), &nr_bins);
 
 		//4.2 Setup and execute all kernels (i.e. device code)
 		cl::Kernel kernel_histogram = cl::Kernel(program, "histogram");
-		kernel.setArg(0, buf_image_input);
-		kernel.setArg(1, buf_hist_output);
+		kernel_histogram.setArg(0, buf_image_input);
+		kernel_histogram.setArg(1, buf_hist_output);
 		//kernel.setArg(2, buf_bins);
 
 		//call all kernels in a sequence
 		queue.enqueueNDRangeKernel(kernel_histogram, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange);
-		queue.enqueueReadBuffer(buf_hist_output, CL_TRUE, 0, output_size, &B[0]);
+		queue.enqueueReadBuffer(buf_hist_output, CL_TRUE, 0, hist_size, &HISTOGRAM[0]);
 
-		std::cout << "B = " << B << std::endl;
+		std::cout << "Histogram = " << HISTOGRAM << std::endl;
+
+		std::vector<mytype> CUMUL_HISTOGRAM(256);
+		size_t cumul_hist_size = CUMUL_HISTOGRAM.size() * sizeof(mytype);//size in bytes
+
+		//4.1 Copy data to device memory
+		queue.enqueueFillBuffer(buf_cumul_hist_output, 0, 0, cumul_hist_size);
+
+		//4.2 Setup and execute all kernels (i.e. device code)
+		cl::Kernel kernel_cumul_histogram = cl::Kernel(program, "simple_cumul_hist");
+		kernel_cumul_histogram.setArg(0, buf_hist_output);
+		kernel_cumul_histogram.setArg(1, buf_cumul_hist_output);
+
+		//call all kernels in a sequence
+		queue.enqueueNDRangeKernel(kernel_cumul_histogram, cl::NullRange, cl::NDRange(hist_size), cl::NullRange);
+		queue.enqueueReadBuffer(buf_cumul_hist_output, CL_TRUE, 0, cumul_hist_size, &CUMUL_HISTOGRAM[0]);
+
+		std::cout << "Cumulative Histogram = " << CUMUL_HISTOGRAM << std::endl;
+
 
 		// && !disp_output.is_closed() && !disp_output.is_keyESC()
+
 		while (!disp_input.is_closed() 
-			&& !disp_input.is_keyESC() ) {
+			&& !disp_input.is_keyESC() && !hist_disp.is_closed() && !hist_disp.is_keyESC()) {
 			disp_input.wait(1);
-			//disp_output.wait(1);
+			hist_disp.wait(1);
 		}
 	}
 	catch (const cl::Error& err) {
