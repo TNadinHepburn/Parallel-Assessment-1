@@ -93,5 +93,12 @@ kernel void image_equalizer(global uchar* A, global uchar* B, global int* LUT) {
 	B[id] = result_LUT;
 }
 
-//RGBtoYCHMK
-kernel void image_equalizer(global int* R, global int* G, global int* B, global int* Y, global int* Cb, global int* Cr) {
+//RGBtoYCBCR
+kernel void rgb2ycbrb(global int* R, global int* G, global int* B, global int* Y, global int* Cb, global int* Cr) {
+
+}
+
+kernel void ycbrb2rgb(global int* Y, global int* Cb, global int* Cr, global int* R, global int* G, global int* B) {
+
+}
+
