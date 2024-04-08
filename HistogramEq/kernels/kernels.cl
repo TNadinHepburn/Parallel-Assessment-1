@@ -6,12 +6,12 @@
 
 
 
-kernel void histogram(global const uchar* A, global int* H) {
+kernel void histogram_gs(global const uchar* A, global int* H) {
 	int id = get_global_id(0);
 	//int lid = get_local_id(0);
-	int bin_index = A[id];
-
-	//if (lid < nr_bins)
+	//int bin_index = A[id];
+	int bin_index = A[id] / (256 / (int)NB);
+	//if (lid < NB)
 		//H[lid] = 0;
 
 	//barrier(CLK_LOCAL_MEM_FENCE);
@@ -99,10 +99,6 @@ kernel void rgb2ycbrb(global uchar* A, global uchar* B) {
 	int image_size = get_global_size(0) / 3; //each image consists of 3 colour channels
 	int colour_channel = id / image_size; // 0 - red, 1 - green, 2 - blue
 
-	double Y = 0.0;
-	double Cb = 0.0;
-	double Cr = 0.0;
-
 	//Y channel
 	if (colour_channel == 0) {
 		int r_val = A[id];
@@ -133,9 +129,6 @@ kernel void ycbrb2rgb(global uchar* A, global uchar* B) {
 	int image_size = get_global_size(0) / 3; //each image consists of 3 colour channels
 	int colour_channel = id / image_size; // 0 - red, 1 - green, 2 - blue
 
-	int R = 0;
-	int G = 0;
-	int B = 0;
 
 	//red channel
 	if (colour_channel == 0) {
@@ -155,7 +148,7 @@ kernel void ycbrb2rgb(global uchar* A, global uchar* B) {
 	else {
 		int Y_val = A[id] - image_size - image_size;
 		int Cb_val = A[id] - image_size;
-		B[id] = 298.082 * Y / 256 + 516.412 * Cb / 256 - 276.836;
+		B[id] = 298.082 * Y_val / 256 + 516.412 * Cb_val / 256 - 276.836;
 	}
 }
 
