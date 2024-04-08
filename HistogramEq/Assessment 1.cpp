@@ -42,6 +42,11 @@ int main(int argc, char** argv) {
 		CImg<unsigned char> image_input(image_filename.c_str());
 		CImgDisplay disp_input(image_input, "input");
 
+		//// stackoverflow.com/a/35794077
+		//size_t pos = image_filename.rfind("."); 
+		//string file_type = image_filename.substr(0, pos);
+		//bool colour_img = (file_type == "ppm");
+
 		//Part 2 - host operations
 		//2.1 Select computing devices
 		cl::Context context = GetContext(platform_id, device_id);
