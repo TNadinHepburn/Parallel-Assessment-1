@@ -42,29 +42,18 @@ int main(int argc, char** argv) {
 		CImg<unsigned char> image_input(image_filename.c_str());
 		CImgDisplay disp_input(image_input, "input");
 
-		//// stackoverflow.com/a/35794077
-		//size_t pos = image_filename.rfind("."); 
-		//string file_type = image_filename.substr(0, pos);
-		//bool colour_img = (file_type == "ppm");
-
 		//Part 2 - host operations
 		//2.1 Select computing devices
 		cl::Context context = GetContext(platform_id, device_id);
-
 		//display the selected device
 		std::cout << "Running on " << GetPlatformName(platform_id) << ", " << GetDeviceName(platform_id, device_id) << std::endl;
-
 		//create a queue to which we will push commands for the device
 		cl::CommandQueue queue(context, CL_QUEUE_PROFILING_ENABLE);
-
 		//2.2 Load & build the device code
 		cl::Program::Sources sources;
-
 		AddSources(sources, "kernels.cl");
-
 		cl::Program program(context, sources);
-
-		//build and debug the kernel code
+		// build and debug the kernel code
 		try {
 			program.build();
 		}
@@ -81,9 +70,7 @@ int main(int argc, char** argv) {
 		size_t hist_size = HISTOGRAM.size() * sizeof(mytype);//size in bytes
 
 
-		//Part 4 - device operations
-
-		//device - buffers
+		// buffer declarations
 		cl::Buffer buf_image_input(context, CL_MEM_READ_ONLY, image_input.size());
 		cl::Buffer buf_hist_output(context, CL_MEM_READ_WRITE, hist_size);
 		cl::Buffer buf_cumul_hist_output(context, CL_MEM_READ_WRITE, hist_size);
@@ -92,13 +79,12 @@ int main(int argc, char** argv) {
 		// cl::Buffer buf_bins(context, CL_MEM_READ_ONLY, sizeof(int));
 		vector<unsigned char> equal_output_buffer(image_input.size());
 
+		// Caclulate intensity histogram of input image //
 
-		//4.1 Copy data to device memory
 		queue.enqueueWriteBuffer(buf_image_input, CL_TRUE, 0, image_input.size(), &image_input.data()[0]);
 		queue.enqueueFillBuffer(buf_hist_output, 0, 0, hist_size);
 		//queue.enqueueWriteBuffer(buf_bins, CL_TRUE, 0, sizeof(int), &nr_bins);
 
-		//4.2 Setup and execute all kernels (i.e. device code)
 		cl::Kernel kernel_histogram = cl::Kernel(program, "histogram");
 		kernel_histogram.setArg(0, buf_image_input);
 		kernel_histogram.setArg(1, buf_hist_output);
@@ -106,37 +92,38 @@ int main(int argc, char** argv) {
 
 		cl::Event prof_event_hist;
 
-		//call all kernels in a sequence
 		queue.enqueueNDRangeKernel(kernel_histogram, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange, NULL, &prof_event_hist);
 		queue.enqueueReadBuffer(buf_hist_output, CL_TRUE, 0, hist_size, &HISTOGRAM[0]);
 
 		std::cout << "Histogram = " << HISTOGRAM << std::endl;
 
+		// Calculate cumulative histogram //
+
 		std::vector<mytype> CUMUL_HISTOGRAM(256);
 		size_t cumul_hist_size = CUMUL_HISTOGRAM.size() * sizeof(mytype);//size in bytes
 
-		//4.1 Copy data to device memory
 		queue.enqueueFillBuffer(buf_cumul_hist_output, 0, 0, cumul_hist_size);
 
-		//4.2 Setup and execute all kernels (i.e. device code)
-		cl::Kernel kernel_cumul_histogram = cl::Kernel(program, "simple_cumul_hist");
+		cl::Kernel kernel_cumul_histogram = cl::Kernel(program, "scan_hs");
 		kernel_cumul_histogram.setArg(0, buf_hist_output);
 		kernel_cumul_histogram.setArg(1, buf_cumul_hist_output);
 
-
 		cl::Event prof_event_cumul;
-		//call all kernels in a sequence
+
 		queue.enqueueNDRangeKernel(kernel_cumul_histogram, cl::NullRange, cl::NDRange(hist_size), cl::NullRange, NULL, &prof_event_cumul);
-		queue.enqueueReadBuffer(buf_cumul_hist_output, CL_TRUE, 0, cumul_hist_size, &CUMUL_HISTOGRAM[0]);
+		queue.enqueueReadBuffer(buf_hist_output, CL_TRUE, 0, cumul_hist_size, &CUMUL_HISTOGRAM[0]);
 
 		std::cout << "Cumulative Histogram = " << CUMUL_HISTOGRAM << std::endl;
+
+		// Normalise and scaling of cumulative histogram //
 
 		std::vector<mytype> LUT(256);
 		size_t LUT_size = LUT.size() * sizeof(mytype);//size in bytes
 
 		queue.enqueueFillBuffer(buf_LUT_output, 0, 0, LUT_size);
 		cl::Kernel kernel_LUT = cl::Kernel(program, "freqency_normalisation");
-		kernel_LUT.setArg(0, buf_cumul_hist_output);
+		//kernel_LUT.setArg(0, buf_cumul_hist_output); //(for atomic calculation)
+		kernel_LUT.setArg(0, buf_hist_output);
 		kernel_LUT.setArg(1, buf_LUT_output);
 
 
@@ -147,6 +134,8 @@ int main(int argc, char** argv) {
 
 		std::cout << "LUT = " << LUT << std::endl;
 
+		// Backprojection of LUT on input image //
+
 		cl::Kernel kernel_equalize = cl::Kernel(program, "image_equalizer");
 		kernel_equalize.setArg(0, buf_image_input);
 		kernel_equalize.setArg(1, buf_equal_output);
@@ -156,8 +145,9 @@ int main(int argc, char** argv) {
 
 		queue.enqueueNDRangeKernel(kernel_equalize, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange, NULL, &prof_event_equal);
 
-
 		queue.enqueueReadBuffer(buf_equal_output, CL_TRUE, 0, equal_output_buffer.size(), &equal_output_buffer.data()[0]);
+
+		// Display Memory transfer, kernel timings and total timings
 
 		cout << endl;
 		std::cout << "Histogram kernel execution time [ns]: " << prof_event_hist.getProfilingInfo<CL_PROFILING_COMMAND_END>() - prof_event_hist.getProfilingInfo<CL_PROFILING_COMMAND_START>() << std::endl;

@@ -1,0 +1,85 @@
+with hs scan
+Histogram kernel execution time [ns]: 232448
+Queued 2, Submitted 5, Executed 232, Total 240 [us]
+
+Cumulative Histogram kernel execution time [ns]: 6144
+Queued 3, Submitted 147, Executed 6, Total 157 [us]
+
+LUT kernel execution time [ns]: 6144
+Queued 3, Submitted 149, Executed 6, Total 159 [us]
+
+Image equalization kernel execution time [ns]: 11264
+Queued 5, Submitted 84, Executed 11, Total 101 [us]
+
+Vector kernel execution time [ns]: 18446744073662324736
+Queued 5, Submitted 84, Executed 11, Total 101 [us]
+
+with atomic scan
+Histogram kernel execution time [ns]: 233472
+Queued 2, Submitted 23, Executed 233, Total 259 [us]
+
+Cumulative Histogram kernel execution time [ns]: 120832
+Queued 3, Submitted 154, Executed 120, Total 278 [us]
+
+LUT kernel execution time [ns]: 6144
+Queued 3, Submitted 145, Executed 6, Total 155 [us]
+
+Image equalization kernel execution time [ns]: 11264
+Queued 5, Submitted 79, Executed 11, Total 95 [us]
+
+Vector kernel execution time [ns]: 18446744073662925824
+Queued 5, Submitted 79, Executed 11, Total 95 [us]
+
+
+with hs scan
+Cumulative Histogram kernel execution time [ns]: 6144
+Queued 3, Submitted 147, Executed 6, Total 157 [us]
+
+with atomic scan
+Cumulative Histogram kernel execution time [ns]: 120832
+Queued 3, Submitted 154, Executed 120, Total 278 [us]
+
+		//// stackoverflow.com/a/35794077
+		//size_t pos = image_filename.rfind("."); 
+		//string file_type = image_filename.substr(0, pos);
+		//bool colour_img = (file_type == "ppm");
+
+scratch = 1 2 3 4 5 6 7 8
+	   2   4   6   8
+             4       8
+                 8
+
+
+		// Cumulative hist atomic
+		cl::Kernel kernel_cumul_histogram = cl::Kernel(program, "simple_cumul_hist");
+		kernel_cumul_histogram.setArg(0, buf_hist_output);
+		kernel_cumul_histogram.setArg(1, buf_cumul_hist_output);
+		cl::Event prof_event_cumul;
+		queue.enqueueNDRangeKernel(kernel_cumul_histogram, cl::NullRange, cl::NDRange(hist_size), cl::NullRange, NULL, &prof_event_cumul);
+		queue.enqueueReadBuffer(buf_cumul_hist_output, CL_TRUE, 0, cumul_hist_size, &CUMUL_HISTOGRAM[0]);
+		std::cout << "Cumulative Histogram = " << CUMUL_HISTOGRAM << std::endl;
+
+
+
+
+
+
+max _ val
+
+		size_t input_size = image_input.size() * sizeof(mytype);
+
+		size_t output_size = input_size;
+		std::vector<unsigned char> max_value(output_size);
+
+		cl::Buffer buf_max_input(context, CL_MEM_READ_ONLY, input_size);
+		cl::Buffer buf_max_output(context, CL_MEM_READ_WRITE, output_size);
+		queue.enqueueWriteBuffer(buf_max_input, CL_TRUE, 0, input_size, &image_input.data()[0]);
+		queue.enqueueFillBuffer(buf_max_output, 0, 0, output_size);
+		cl::Kernel kernel_max_val = cl::Kernel(program, "max_val");
+		kernel_max_val.setArg(0, buf_max_input);
+		kernel_max_val.setArg(1, buf_max_output);
+		cl::Event prof_event_max;
+		queue.enqueueNDRangeKernel(kernel_max_val, cl::NullRange, cl::NDRange(input_size), cl::NullRange, NULL, &prof_event_max);
+		queue.enqueueReadBuffer(buf_max_output, CL_TRUE, 0, output_size, &max_value[0]);
+
+		std::cout << "MaxValue = " << max_value[0] << std::endl;

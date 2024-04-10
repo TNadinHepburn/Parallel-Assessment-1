@@ -52,8 +52,5 @@
     <CopyFileToFolders Include="kernels\kernels.cl">
       <Filter>kernels</Filter>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="..\images\mdr8.ppm">
-      <Filter>images</Filter>
-    </CopyFileToFolders>
   </ItemGroup>
 </Project>

@@ -4,13 +4,33 @@
 //make LUT from cum hist
 //map input image values to equalized values using LUT
 
+kernel void max_val(global const uchar* A, global int* B, local int* scratch) {
+	int id = get_global_id(0);
+	int lid = get_local_id(0);
+	int N = get_local_size(0);
 
+	scratch[lid] = A[id];
 
-kernel void histogram_gs(global const uchar* A, global int* H) {
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	for (int i = 1; i < N; i *= 2) {
+		if (!(lid % (i * 2)) && ((lid + i) < N)) {
+			if (scratch[lid] < scratch[lid + i]) {
+				scratch[lid] = scratch[lid + i];
+			}
+		}
+		barrier(CLK_LOCAL_MEM_FENCE);
+	}
+	if (!lid) {
+		B[id] = scratch[0];
+	}
+}
+
+kernel void histogram(global const uchar* A, global int* H) {
 	int id = get_global_id(0);
 	//int lid = get_local_id(0);
-	//int bin_index = A[id];
-	int bin_index = A[id] / (256 / A[255]);
+	int bin_index = A[id];
+	//int bin_index = A[id] / (256 / A[255]);
 	//if (lid < NB)
 		//H[lid] = 0;
 
@@ -19,6 +39,7 @@ kernel void histogram_gs(global const uchar* A, global int* H) {
 	atomic_inc(&H[bin_index]);
 }
 
+// scan
 kernel void simple_cumul_hist(global int* H, global int* CH) {
 	int id = get_global_id(0);
 	int N = get_global_size(0);
@@ -46,7 +67,6 @@ kernel void scan_hs(global int* A, global int* B) {
 }
 
 //Blelloch basic exclusive scan
-//
 kernel void scan_bl(global int* A) {
 	int id = get_global_id(0);
 	int N = get_global_size(0);
