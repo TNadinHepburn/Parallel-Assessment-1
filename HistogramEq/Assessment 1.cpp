@@ -15,7 +15,7 @@ void print_help() {
 	std::cerr << "  -d : select device" << std::endl;
 	std::cerr << "  -l : list all platforms and devices" << std::endl;
 	std::cerr << "  -f : input image file (default: test.ppm)" << std::endl;
-	std::cerr << "  -b : number of bins in histogram (default: 255)" << std::endl;
+	//std::cerr << "  -b : number of bins in histogram (default: 256)" << std::endl;
 	std::cerr << "  -h : print this message" << std::endl;
 }
 
@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
 		else if ((strcmp(argv[i], "-d") == 0) && (i < (argc - 1))) { device_id = atoi(argv[++i]); }
 		else if (strcmp(argv[i], "-l") == 0) { std::cout << ListPlatformsDevices() << std::endl; }
 		else if ((strcmp(argv[i], "-f") == 0) && (i < (argc - 1))) { image_filename = argv[++i]; }
-		else if ((strcmp(argv[i], "-b") == 0) && (i < (argc - 1))) { no_bins = std::stoi(argv[++i]); }
+		//else if ((strcmp(argv[i], "-b") == 0) && (i < (argc - 1))) { no_bins = std::stoi(argv[++i]); }
 		else if (strcmp(argv[i], "-h") == 0) { print_help(); return 0; }
 	}
 
@@ -39,9 +39,6 @@ int main(int argc, char** argv) {
 
 	//detect any potential exceptions
 	try {
-		CImg<unsigned char> image_input(image_filename.c_str());
-		CImgDisplay disp_input(image_input, "input");
-
 		//Part 2 - host operations
 		//2.1 Select computing devices
 		cl::Context context = GetContext(platform_id, device_id);
@@ -64,11 +61,12 @@ int main(int argc, char** argv) {
 			throw err;
 		}
 
+		CImg<unsigned char> image_input(image_filename.c_str());
+		CImgDisplay disp_input(image_input, "input");
 
 		typedef int mytype;
 		std::vector<mytype> HISTOGRAM(no_bins);
 		size_t hist_size = HISTOGRAM.size() * sizeof(mytype);//size in bytes
-
 
 		// buffer declarations
 		cl::Buffer buf_image_input(context, CL_MEM_READ_ONLY, image_input.size());
@@ -77,7 +75,7 @@ int main(int argc, char** argv) {
 		cl::Buffer buf_LUT_output(context, CL_MEM_READ_WRITE, hist_size);
 		cl::Buffer buf_equal_output(context, CL_MEM_READ_WRITE, image_input.size());
 		// cl::Buffer buf_bins(context, CL_MEM_READ_ONLY, sizeof(int));
-		vector<unsigned char> equal_output_buffer(image_input.size());
+		std::vector<unsigned char> equal_output_buffer(image_input.size());
 
 		// Caclulate intensity histogram of input image //
 
@@ -99,14 +97,14 @@ int main(int argc, char** argv) {
 
 		// Calculate cumulative histogram //
 
-		std::vector<mytype> CUMUL_HISTOGRAM(256);
+		std::vector<mytype> CUMUL_HISTOGRAM(no_bins);
 		size_t cumul_hist_size = CUMUL_HISTOGRAM.size() * sizeof(mytype);//size in bytes
 
 		queue.enqueueFillBuffer(buf_cumul_hist_output, 0, 0, cumul_hist_size);
 
 		cl::Kernel kernel_cumul_histogram = cl::Kernel(program, "scan_hs");
 		kernel_cumul_histogram.setArg(0, buf_hist_output);
-		kernel_cumul_histogram.setArg(1, buf_cumul_hist_output);
+		kernel_cumul_histogram.setArg(1, buf_cumul_hist_output); //used as the temp store for intermediate results
 
 		cl::Event prof_event_cumul;
 
@@ -117,12 +115,11 @@ int main(int argc, char** argv) {
 
 		// Normalise and scaling of cumulative histogram //
 
-		std::vector<mytype> LUT(256);
+		std::vector<mytype> LUT(no_bins);
 		size_t LUT_size = LUT.size() * sizeof(mytype);//size in bytes
 
 		queue.enqueueFillBuffer(buf_LUT_output, 0, 0, LUT_size);
 		cl::Kernel kernel_LUT = cl::Kernel(program, "freqency_normalisation");
-		//kernel_LUT.setArg(0, buf_cumul_hist_output); //(for atomic calculation)
 		kernel_LUT.setArg(0, buf_hist_output);
 		kernel_LUT.setArg(1, buf_LUT_output);
 
@@ -163,6 +160,10 @@ int main(int argc, char** argv) {
 		cout << endl;
 
 		std::cout << "Image equalization kernel execution time [ns]: " << prof_event_equal.getProfilingInfo<CL_PROFILING_COMMAND_END>() - prof_event_equal.getProfilingInfo<CL_PROFILING_COMMAND_START>() << std::endl;
+		std::cout << GetFullProfilingInfo(prof_event_equal, ProfilingResolution::PROF_US) << endl;
+		cout << endl;
+
+		std::cout << "Total kernel execution time [ns]: " << prof_event_equal.getProfilingInfo<CL_PROFILING_COMMAND_END>() - prof_event_hist.getProfilingInfo<CL_PROFILING_COMMAND_START>() << std::endl;
 		std::cout << GetFullProfilingInfo(prof_event_equal, ProfilingResolution::PROF_US) << endl;
 		cout << endl;
 
